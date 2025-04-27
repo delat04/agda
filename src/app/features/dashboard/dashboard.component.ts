@@ -16,21 +16,49 @@ import { Observable, BehaviorSubject } from 'rxjs';
     <div class="flex flex-col h-screen">
       <!-- Fixed Header Section -->
       <div class="flex-none">
-        <div class="flex items-center justify-between mb-6">
-          <h1 class="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <div class="flex items-center justify-between mb-4 p-2">
+          <h1 class="text-xl md:text-2xl font-bold text-gray-900">Dashboard</h1>
 
-          <div *ngIf="isEventManager">
-            <a
-              routerLink="/events/create"
-              class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 transition-all shadow-md">
-              Create Event
-            </a>
+          <div class="flex space-x-2">
+            <!-- Filter Toggle Button -->
+            <button
+              (click)="toggleFilters()"
+              class="px-3 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-all shadow-sm flex items-center"
+              [class.border-indigo-500]="showFilters"
+              [class.text-indigo-600]="showFilters">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              <span class="hidden md:inline">Filter</span>
+            </button>
+
+            <div *ngIf="isEventManager">
+              <a
+                routerLink="/events/create"
+                class="px-3 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-500 transition-all shadow-md flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span class="hidden md:inline">Create Event</span>
+              </a>
+            </div>
           </div>
         </div>
 
-        <!-- Fixed Search/Filter Section -->
-        <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200 sticky top-0 z-10">
-          <h2 class="text-lg font-medium text-gray-900 mb-4">Search Events</h2>
+        <!-- Collapsible Filter Section -->
+        <div *ngIf="showFilters"
+             [@slideInOut]
+             class="bg-white rounded-lg shadow-md p-4 md:p-6 border border-gray-200 mb-4">
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="text-lg font-medium text-gray-900">Search Events</h2>
+            <button
+              (click)="toggleFilters()"
+              class="text-gray-500 hover:text-gray-700">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
 
           <form [formGroup]="filterForm" (ngSubmit)="applyFilters()" class="space-y-4">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -58,26 +86,28 @@ import { Observable, BehaviorSubject } from 'rxjs';
               </div>
 
               <!-- Date Range -->
-              <div>
-                <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
-                <input
-                  type="date"
-                  id="startDate"
-                  formControlName="startDate"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none">
-              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <label for="startDate" class="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                  <input
+                    type="date"
+                    id="startDate"
+                    formControlName="startDate"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none">
+                </div>
 
-              <div>
-                <label for="endDate" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
-                <input
-                  type="date"
-                  id="endDate"
-                  formControlName="endDate"
-                  class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none">
+                <div>
+                  <label for="endDate" class="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                  <input
+                    type="date"
+                    id="endDate"
+                    formControlName="endDate"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none">
+                </div>
               </div>
 
               <!-- Tags -->
-              <div class="md:col-span-2">
+              <div class="md:col-span-3">
                 <label class="block text-sm font-medium text-gray-700 mb-2">Tags</label>
                 <div class="flex flex-wrap gap-2 max-h-24 overflow-y-auto p-2 border border-gray-200 rounded-md bg-gray-50">
                   <div *ngFor="let tag of availableTags$ | async"
@@ -112,16 +142,69 @@ import { Observable, BehaviorSubject } from 'rxjs';
         </div>
       </div>
 
+      <!-- Active Filters Display -->
+      <div *ngIf="hasActiveFilters()" class="px-2 mb-4 flex-none">
+        <div class="flex flex-wrap items-center gap-2 text-sm">
+          <span class="font-medium text-gray-700">Active filters:</span>
+
+          <div *ngIf="filterForm.value.searchTerm"
+               class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full flex items-center">
+            <span>Search: "{{ filterForm.value.searchTerm }}"</span>
+            <button (click)="clearSearchTerm()" class="ml-1 text-indigo-600 hover:text-indigo-800">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div *ngIf="filterForm.value.category"
+               class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full flex items-center">
+            <span>Category: {{ filterForm.value.category }}</span>
+            <button (click)="clearCategory()" class="ml-1 text-indigo-600 hover:text-indigo-800">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div *ngIf="selectedTags.length > 0"
+               class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full flex items-center">
+            <span>{{ selectedTags.length }} tag{{ selectedTags.length > 1 ? 's' : '' }} selected</span>
+            <button (click)="clearTags()" class="ml-1 text-indigo-600 hover:text-indigo-800">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div *ngIf="filterForm.value.startDate || filterForm.value.endDate"
+               class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full flex items-center">
+            <span>Date range</span>
+            <button (click)="clearDates()" class="ml-1 text-indigo-600 hover:text-indigo-800">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <button
+            (click)="resetFilters()"
+            class="text-indigo-600 hover:text-indigo-800 text-sm font-medium ml-auto">
+            Clear all
+          </button>
+        </div>
+      </div>
+
       <!-- Scrollable Events Section -->
-      <div class="flex-grow overflow-y-auto mt-6">
-        <div class="bg-white rounded-lg shadow-md p-6 border border-gray-200">
-          <div class="flex justify-between items-center mb-4">
+      <div class="flex-grow overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-md p-4 md:p-6 border border-gray-200">
+          <div class="flex justify-between items-center mb-4 sticky top-0 bg-white py-2 z-10">
             <h2 class="text-lg font-medium text-gray-900">
               {{ isEventManager ? 'Your Created Events' : 'Events' }}
             </h2>
             <ng-container *ngIf="(totalEvents | async) as total">
               <div class="text-sm text-gray-500" *ngIf="total > 0">
-                Showing {{ (filteredEvents$ | async)?.length || 0 }} of {{ total }} events
+                {{ (filteredEvents$ | async)?.length || 0 }} of {{ total }} events
               </div>
             </ng-container>
           </div>
@@ -138,7 +221,7 @@ import { Observable, BehaviorSubject } from 'rxjs';
 
           <div *ngIf="!loading && (filteredEvents$ | async)?.length ?? 0 > 0"
                #eventsContainer
-               class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 overflow-y-auto py-2 px-1">
+               class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6 overflow-y-auto py-2 px-1">
             <div *ngFor="let event of filteredEvents$ | async"
                  class="bg-white rounded-lg overflow-hidden shadow-md border border-gray-100 hover:shadow-lg transition-all duration-200">
               <img [src]="event.thumbnail || 'https://via.placeholder.com/300x200'"
@@ -147,7 +230,7 @@ import { Observable, BehaviorSubject } from 'rxjs';
               <div class="p-4">
                 <div class="flex items-center mb-1">
                   <span class="text-xs bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full font-medium">{{ event.category }}</span>
-                  <span class="text-xs text-gray-500 ml-auto">{{ event.start | date }}</span>
+                  <span class="text-xs text-gray-500 ml-auto">{{ event.start | date:'shortDate' }}</span>
                 </div>
 
                 <h3 class="text-lg font-medium text-gray-900 mb-1 line-clamp-2">{{ event.title }}</h3>
@@ -157,7 +240,7 @@ import { Observable, BehaviorSubject } from 'rxjs';
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                   </svg>
-                  {{ event.location }}
+                  <span class="truncate">{{ event.location }}</span>
                 </div>
 
                 <div *ngIf="event.tags && event.tags.length > 0" class="mb-4 flex flex-wrap gap-1">
@@ -231,6 +314,7 @@ export class DashboardComponent implements OnInit {
   currentPage = 1;
   pageSize = 9;
   hasMoreEvents = false;
+  showFilters = false;  // Track filter section visibility
 
   filterForm: FormGroup = this.fb.group({
     searchTerm: [''],
@@ -263,6 +347,11 @@ export class DashboardComponent implements OnInit {
       }, { emitEvent: false });
 
       this.selectedTags = [...(filters.tags || [])];
+
+      // Show filter section if there are any active filters
+      if (this.hasActiveFilters()) {
+        this.showFilters = true;
+      }
     });
 
     // Get current user's subscribed event IDs
@@ -278,6 +367,44 @@ export class DashboardComponent implements OnInit {
       this.totalEvents.next(count);
       this.updateHasMoreEvents();
     });
+  }
+
+  // Toggle filters visibility
+  toggleFilters(): void {
+    this.showFilters = !this.showFilters;
+  }
+
+  // Check if there are any active filters
+  hasActiveFilters(): boolean {
+    const formValues = this.filterForm.value;
+    return (
+      (formValues.searchTerm && formValues.searchTerm.trim() !== '') ||
+      (formValues.category && formValues.category !== '') ||
+      formValues.startDate !== null ||
+      formValues.endDate !== null ||
+      this.selectedTags.length > 0
+    );
+  }
+
+  // Clear individual filters
+  clearSearchTerm(): void {
+    this.filterForm.patchValue({ searchTerm: '' });
+    this.applyFilters();
+  }
+
+  clearCategory(): void {
+    this.filterForm.patchValue({ category: '' });
+    this.applyFilters();
+  }
+
+  clearDates(): void {
+    this.filterForm.patchValue({ startDate: null, endDate: null });
+    this.applyFilters();
+  }
+
+  clearTags(): void {
+    this.selectedTags = [];
+    this.applyFilters();
   }
 
   loadEvents(): void {
@@ -330,6 +457,11 @@ export class DashboardComponent implements OnInit {
 
     this.dashboardService.updateFilters(filters);
     this.loadEvents();
+
+    // Hide filters after applying on mobile
+    if (window.innerWidth < 768) {
+      this.showFilters = false;
+    }
   }
 
   resetFilters(): void {

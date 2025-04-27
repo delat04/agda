@@ -11,12 +11,31 @@ import { Event, EventImage } from '../../../core/models/event.model';
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   template: `
-    <div class="font-[syne] max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-md" style="margin-top: 35px;">
+    <div class="font-[syne] max-w-[68rem] mx-auto p-6 bg-white rounded-lg shadow-md border border-gray-200" style="margin-top: 35px;">
       <h2 class="text-2xl font-semibold text-gray-800 mb-6">{{ isEditMode ? 'Edit Event' : 'Create New Event' }}</h2>
 
-      <form [formGroup]="eventForm" (ngSubmit)="onSubmit()" class="space-y-6">
-        <!-- Basic Info Section -->
-        <div class="border-b border-gray-200 pb-4 mb-4">
+      <!-- Wizard Progress Indicator -->
+      <div class="mb-8">
+        <div class="flex items-center justify-between">
+          <div *ngFor="let step of steps; let i = index"
+               class="flex flex-col items-center flex-1">
+            <div
+              [ngClass]="{'bg-indigo-600': currentStep >= i, 'bg-gray-300': currentStep < i}"
+              class="w-8 h-8 rounded-full flex items-center justify-center text-white font-medium transition-colors duration-300">
+              {{ i + 1 }}
+            </div>
+            <p class="mt-2 text-xs text-center"
+               [ngClass]="{'text-indigo-600 font-medium': currentStep >= i, 'text-gray-500': currentStep < i}">
+              {{ step.label }}
+            </p>
+            <div *ngIf="i < steps.length - 1" class="hidden md:block w-full border-t border-gray-300 mt-4"></div>
+          </div>
+        </div>
+      </div>
+
+      <form [formGroup]="eventForm" class="space-y-6">
+        <!-- Step 1: Basic Information -->
+        <div *ngIf="currentStep === 0">
           <h3 class="text-lg font-medium text-gray-700 mb-4">Basic Information</h3>
 
           <div class="space-y-2">
@@ -74,8 +93,8 @@ import { Event, EventImage } from '../../../core/models/event.model';
           </div>
         </div>
 
-        <!-- Date & Time Section -->
-        <div class="border-b border-gray-200 pb-4 mb-4">
+        <!-- Step 2: Date & Time -->
+        <div *ngIf="currentStep === 1">
           <h3 class="text-lg font-medium text-gray-700 mb-4">Date & Time</h3>
 
           <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -87,6 +106,12 @@ import { Event, EventImage } from '../../../core/models/event.model';
                 formControlName="startDate"
                 class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
+              <div
+                class="text-sm text-red-600 mt-1"
+                *ngIf="eventForm.get('startDate')?.invalid && eventForm.get('startDate')?.touched"
+              >
+                Start date is required
+              </div>
             </div>
 
             <div class="space-y-2">
@@ -97,6 +122,12 @@ import { Event, EventImage } from '../../../core/models/event.model';
                 formControlName="startTime"
                 class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
+              <div
+                class="text-sm text-red-600 mt-1"
+                *ngIf="eventForm.get('startTime')?.invalid && eventForm.get('startTime')?.touched"
+              >
+                Start time is required
+              </div>
             </div>
           </div>
 
@@ -109,6 +140,12 @@ import { Event, EventImage } from '../../../core/models/event.model';
                 formControlName="endDate"
                 class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
+              <div
+                class="text-sm text-red-600 mt-1"
+                *ngIf="eventForm.get('endDate')?.invalid && eventForm.get('endDate')?.touched"
+              >
+                End date is required
+              </div>
             </div>
 
             <div class="space-y-2">
@@ -119,6 +156,12 @@ import { Event, EventImage } from '../../../core/models/event.model';
                 formControlName="endTime"
                 class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               >
+              <div
+                class="text-sm text-red-600 mt-1"
+                *ngIf="eventForm.get('endTime')?.invalid && eventForm.get('endTime')?.touched"
+              >
+                End time is required
+              </div>
             </div>
           </div>
 
@@ -133,8 +176,8 @@ import { Event, EventImage } from '../../../core/models/event.model';
           </div>
         </div>
 
-        <!-- Location Section -->
-        <div class="border-b border-gray-200 pb-4 mb-4">
+        <!-- Step 3: Location -->
+        <div *ngIf="currentStep === 2">
           <h3 class="text-lg font-medium text-gray-700 mb-4">Location</h3>
           <div class="space-y-2">
             <label for="location" class="block text-sm font-medium text-gray-700">Location</label>
@@ -145,38 +188,37 @@ import { Event, EventImage } from '../../../core/models/event.model';
               class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
             >
           </div>
-        </div>
 
-        <!-- Attendees Section -->
-        <div class="border-b border-gray-200 pb-4 mb-4">
-          <h3 class="text-lg font-medium text-gray-700 mb-4">Attendees</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div class="space-y-2">
-              <label for="attendees" class="block text-sm font-medium text-gray-700">Current Attendees</label>
-              <input
-                type="number"
-                id="attendees"
-                formControlName="attendees"
-                min="0"
-                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
-            </div>
+          <div class="space-y-2 mt-4">
+            <h4 class="text-md font-medium text-gray-700 mb-4">Attendees</h4>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div class="space-y-2">
+                <label for="attendees" class="block text-sm font-medium text-gray-700">Current Attendees</label>
+                <input
+                  type="number"
+                  id="attendees"
+                  formControlName="attendees"
+                  min="0"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+              </div>
 
-            <div class="space-y-2">
-              <label for="maxAttendees" class="block text-sm font-medium text-gray-700">Maximum Attendees</label>
-              <input
-                type="number"
-                id="maxAttendees"
-                formControlName="maxAttendees"
-                min="0"
-                class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-              >
+              <div class="space-y-2">
+                <label for="maxAttendees" class="block text-sm font-medium text-gray-700">Maximum Attendees</label>
+                <input
+                  type="number"
+                  id="maxAttendees"
+                  formControlName="maxAttendees"
+                  min="0"
+                  class="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Images Section -->
-        <div class="border-b border-gray-200 pb-4 mb-4">
+        <!-- Step 4: Images -->
+        <div *ngIf="currentStep === 3">
           <h3 class="text-lg font-medium text-gray-700 mb-4">Images</h3>
 
           <div class="space-y-2">
@@ -244,8 +286,8 @@ import { Event, EventImage } from '../../../core/models/event.model';
           </div>
         </div>
 
-        <!-- Tags Section -->
-        <div class="border-b border-gray-200 pb-4 mb-4">
+        <!-- Step 5: Tags & Categories -->
+        <div *ngIf="currentStep === 4">
           <h3 class="text-lg font-medium text-gray-700 mb-4">Tags & Categories</h3>
 
           <div class="space-y-2">
@@ -292,8 +334,8 @@ import { Event, EventImage } from '../../../core/models/event.model';
           </div>
         </div>
 
-        <!-- Settings Section -->
-        <div class="border-b border-gray-200 pb-4 mb-4">
+        <!-- Step 6: Settings -->
+        <div *ngIf="currentStep === 5">
           <h3 class="text-lg font-medium text-gray-700 mb-4">Settings</h3>
 
           <div class="flex items-center space-x-2">
@@ -327,23 +369,49 @@ import { Event, EventImage } from '../../../core/models/event.model';
           </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="flex justify-end space-x-4 pt-4">
+        <!-- Navigation Buttons -->
+        <div class="flex justify-between pt-4">
           <button
+            *ngIf="currentStep > 0"
             type="button"
-            class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            (click)="goBack()"
+            class="px-4 py-2 text-sm font-medium text-indigo-600 bg-white border border-indigo-300 rounded-md shadow-sm hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+            (click)="prevStep()"
           >
-            Cancel
+            Previous
           </button>
-          <button
-            type="submit"
-            class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-            [disabled]="eventForm.invalid"
-            [ngClass]="{'opacity-50 cursor-not-allowed': eventForm.invalid}"
-          >
-            Save
-          </button>
+          <div *ngIf="currentStep === 0"></div> <!-- Spacer for first step -->
+
+          <div class="flex space-x-4">
+            <button
+              *ngIf="currentStep < steps.length - 1"
+              type="button"
+              class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              (click)="nextStep()"
+              [disabled]="!canProceedToNextStep()"
+              [ngClass]="{'opacity-50 cursor-not-allowed': !canProceedToNextStep()}"
+            >
+              Next
+            </button>
+
+            <button
+              *ngIf="currentStep === steps.length - 1"
+              type="button"
+              class="px-4 py-2 text-sm font-medium text-white bg-indigo-600 border border-transparent rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              (click)="onSubmit()"
+              [disabled]="eventForm.invalid"
+              [ngClass]="{'opacity-50 cursor-not-allowed': eventForm.invalid}"
+            >
+              Save
+            </button>
+
+            <button
+              type="button"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+              (click)="goBack()"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       </form>
     </div>
@@ -356,6 +424,18 @@ export class EventFormComponent implements OnInit {
   eventId?: string;
   tagsArray: string[] = [];
   newTagControl!: FormControl;
+
+  // Wizard step management
+  currentStep = 0;
+  steps = [
+    { label: 'Basic Info', isValid: false },
+    { label: 'Date & Time', isValid: false },
+    { label: 'Location', isValid: false },
+    { label: 'Images', isValid: false },
+    { label: 'Tags', isValid: false },
+    { label: 'Settings', isValid: false }
+  ];
+
   constructor(
     private fb: FormBuilder,
     private eventService: EventService,
@@ -373,6 +453,12 @@ export class EventFormComponent implements OnInit {
         this.eventId = params['id'];
         this.loadEvent(this.eventId);
       }
+    });
+
+    // Set up form status changes to validate steps
+    this.updateStepValidity();
+    this.eventForm.statusChanges.subscribe(() => {
+      this.updateStepValidity();
     });
   }
 
@@ -440,10 +526,63 @@ export class EventFormComponent implements OnInit {
             this.addImage(image);
           });
         }
+
+        // Update steps validity after loading event
+        this.updateStepValidity();
       } else {
         this.router.navigate(['/events']);
       }
     });
+  }
+
+  // Navigation methods for wizard
+  nextStep(): void {
+    if (this.currentStep < this.steps.length - 1 && this.canProceedToNextStep()) {
+      this.currentStep++;
+    }
+  }
+
+  prevStep(): void {
+    if (this.currentStep > 0) {
+      this.currentStep--;
+    }
+  }
+
+  // Check if user can proceed to next step (validate current step)
+  canProceedToNextStep(): boolean {
+    switch (this.currentStep) {
+      case 0: // Basic Info
+        return this.eventForm.get('title')?.valid ?? false;
+      case 1: // Date & Time
+        return (
+          (this.eventForm.get('startDate')?.valid ?? false) &&
+          (this.eventForm.get('startTime')?.valid ?? false) &&
+          (this.eventForm.get('endDate')?.valid ?? false) &&
+          (this.eventForm.get('endTime')?.valid ?? false)
+        );
+      default:
+        return true; // Other steps don't have required fields
+    }
+  }
+
+  // Update the validity status of each step
+  updateStepValidity(): void {
+    // Step 0: Basic Info
+    this.steps[0].isValid = this.eventForm.get('title')?.valid ?? false;
+
+    // Step 1: Date & Time
+    this.steps[1].isValid = (
+      (this.eventForm.get('startDate')?.valid ?? false) &&
+      (this.eventForm.get('startTime')?.valid ?? false) &&
+      (this.eventForm.get('endDate')?.valid ?? false) &&
+      (this.eventForm.get('endTime')?.valid ?? false)
+    );
+
+    // Other steps don't have required fields, so they're always valid
+    this.steps[2].isValid = true;
+    this.steps[3].isValid = true;
+    this.steps[4].isValid = true;
+    this.steps[5].isValid = true;
   }
 
   onSubmit(): void {

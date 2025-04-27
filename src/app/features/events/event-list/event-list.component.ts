@@ -25,7 +25,7 @@ import { trigger, transition, style, animate } from '@angular/animations';
     ]),
   ],
   template: `
-    <div class="font-[syne] bg-gradient-to-br from-gray-50 to-indigo-50 min-h-screen py-12" style="margin-top: 35px;">
+    <div class="font-[syne]  min-h-screen py-12 " >
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <!-- Header with animated underline -->
         <div class="flex justify-between items-center mb-12" @fadeIn>

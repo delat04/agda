@@ -2,7 +2,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, of } from 'rxjs';
-import { Event, EventImage } from '../models/event.model';
+import { Event } from '../models/event.model';
 import { v4 as uuidv4 } from 'uuid';
 
 @Injectable({
@@ -60,6 +60,85 @@ export class EventService {
       images: [],
       createdAt: new Date(2025, 3, 22),
       updatedAt: new Date(2025, 3, 22)
+    }
+    ,{
+      id: '3',
+      title: 'Design Sprint Workshop',
+      description: 'Collaborative product design session',
+      start: new Date(2025, 3, 27, 9, 0),
+      end: new Date(2025, 3, 27, 17, 0),
+      location: 'Innovation Lab',
+      draggable: true,
+      organizer: 'Emily Turner',
+      contactEmail: 'emily@example.com',
+      attendees: 8,
+      maxAttendees: 12,
+      isPublic: false,
+      tags: ['design', 'workshop', 'sprint'],
+      category: 'Workshop',
+      color: '#F4B400',
+      thumbnail: 'https://www.backdrops.com.au/wp-content/uploads/2014/03/DE003B-Disco-1B.jpg',
+      images: [
+        {
+          id: '102',
+          url: 'https://www.backdrops.com.au/wp-content/uploads/2014/03/DE003B-Disco-1B.jpg',
+          caption: 'Innovation Lab',
+          isPrimary: true,
+          order: 0
+        }
+      ],
+      createdAt: new Date(2025, 3, 23),
+      updatedAt: new Date(2025, 3, 23)
+    },
+    {
+      id: '4',
+      title: 'Marketing Strategy Session',
+      description: 'Plan next quarter\'s campaigns',
+      start: new Date(2025, 3, 28, 13, 30),
+      end: new Date(2025, 3, 28, 15, 30),
+      location: 'Board Room B',
+      draggable: true,
+      organizer: 'David Lee',
+      contactEmail: 'david@example.com',
+      attendees: 10,
+      maxAttendees: 20,
+      isPublic: true,
+      tags: ['marketing', 'strategy', 'planning'],
+      category: 'Strategy',
+      color: '#DB4437',
+      thumbnail: 'https://live-production.wcms.abc-cdn.net.au/0ddd78062b717f13e5df6a9215edf2b4?impolicy=wcms_crop_resize&cropH=2813&cropW=5000&xPos=0&yPos=260&width=862&height=485',
+      images: [],
+      createdAt: new Date(2025, 3, 24),
+      updatedAt: new Date(2025, 3, 24)
+    },
+    {
+      id: '5',
+      title: 'Customer Appreciation Day',
+      description: 'Thank our loyal customers',
+      start: new Date(2025, 3, 30, 11, 0),
+      end: new Date(2025, 3, 30, 17, 0),
+      location: 'Outdoor Garden Area',
+      draggable: true,
+      organizer: 'Olivia Brown',
+      contactEmail: 'olivia@example.com',
+      attendees: 50,
+      maxAttendees: 100,
+      isPublic: true,
+      tags: ['customer', 'celebration', 'event'],
+      category: 'Celebration',
+      color: '#AB47BC',
+      thumbnail: 'https://live-production.wcms.abc-cdn.net.au/0ddd78062b717f13e5df6a9215edf2b4?impolicy=wcms_crop_resize&cropH=2813&cropW=5000&xPos=0&yPos=260&width=862&height=485',
+      images: [
+        {
+          id: '103',
+          url: 'https://www.eventbrite.com/blog/wp-content/uploads/2022/02/customer_appreciation_event-scaled.jpg',
+          caption: 'Garden Area',
+          isPrimary: true,
+          order: 0
+        }
+      ],
+      createdAt: new Date(2025, 3, 25),
+      updatedAt: new Date(2025, 3, 25)
     }
   ];
 

@@ -16,7 +16,7 @@ import { Observable } from 'rxjs';
       </div>
 
       <!-- Subscribed Events -->
-      <div class="bg-white rounded-lg shadow p-6">
+      <div class="bg-white rounded-lg shadow p-6 border border-gray-200">
         <div *ngIf="(subscribedEvents$ | async)?.length === 0" class="text-gray-500 p-4 text-center">
           <p>You haven't subscribed to any events yet.</p>
           <a

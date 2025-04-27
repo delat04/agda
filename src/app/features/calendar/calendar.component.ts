@@ -8,8 +8,7 @@ import { MonthViewComponent } from './month-view/month-view.component';
 import { WeekViewComponent } from './week-view/week-view.component';
 import { EventModalComponent } from './event-modal/event-modal.component';
 import { CalendarStateService } from './services/calendar-state.service';
-import { CalendarUtilsService } from './services/calendar-utils.service';
-import { AuthService } from '../../core/services/auth.service'; // Add this import
+import { AuthService } from '../../core/services/auth.service';
 import { DashboardService } from '../../core/services/dashbord.service';
 
 @Component({
@@ -23,7 +22,7 @@ import { DashboardService } from '../../core/services/dashbord.service';
     EventModalComponent,
   ],
   template: `
-    <div class="font-[syne] mt-[14px] bg-white rounded-xl shadow-lg p-6">
+    <div class="font-[syne] mt-[14px] bg-white rounded-xl shadow-lg p-6 border border-gray-200" >
       <!-- Calendar Header -->
       <div class="flex items-center justify-between mb-6">
         <div class="flex items-center gap-4">
