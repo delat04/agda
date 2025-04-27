@@ -1,8 +1,7 @@
-// core/services/auth.service.ts
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, of } from 'rxjs';
-import { delay, tap } from 'rxjs/operators';
+import { HttpClient, HttpErrorResponse } from '@angular/common/http';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { catchError, tap } from 'rxjs/operators';
 
 export interface User {
   id: string;
@@ -18,25 +17,8 @@ export interface User {
 export class AuthService {
   private readonly TOKEN_KEY = 'auth_token';
   private readonly USER_KEY = 'user_data';
+  private readonly API_URL = 'http://localhost:8080/api/users';
   private currentUserSubject = new BehaviorSubject<User | null>(null);
-
-  // Mock data for testing
-  private mockUsers: User[] = [
-    {
-      id: '1',
-      email: 'salim@gmail.com',
-      firstName: 'E',
-      lastName: 'E',
-      role: 'event_seeker'
-    },
-    {
-      id: '2',
-      email: 'sam@gmail.com',
-      firstName: 'A',
-      lastName: 'A',
-      role: 'event_manager'
-    }
-  ];
 
   currentUser$ = this.currentUserSubject.asObservable();
 
@@ -58,29 +40,18 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<{ token: string, user: User }> {
-    // Mock login - in a real scenario this would call the backend
-    const user = this.mockUsers.find(u => u.email === email);
-
-    // Simulate successful login if user exists
-    if (user && password) { // Simple check - any non-empty password works for testing
-      const mockResponse = {
-        token: `mock-token-${Date.now()}`,
-        user
-      };
-
-      // Simulate network delay
-      return of(mockResponse).pipe(
-        delay(800),
-        tap(response => {
-          localStorage.setItem(this.TOKEN_KEY, response.token);
-          localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
-          this.currentUserSubject.next(response.user);
-        })
-      );
-    }
-
-    // Simulate failed login
-    throw new Error('Invalid credentials');
+    return this.http.post<{ token: string, user: User }>(
+      `${this.API_URL}/auth/signin`,
+      { email, password },
+      { headers: { 'Content-Type': 'application/json' } }
+    ).pipe(
+      tap(response => {
+        localStorage.setItem(this.TOKEN_KEY, response.token);
+        localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
+        this.currentUserSubject.next(response.user);
+      }),
+      catchError(this.handleError)
+    );
   }
 
   register(userData: {
@@ -90,31 +61,17 @@ export class AuthService {
     lastName: string;
     role: 'event_seeker' | 'event_manager';
   }): Observable<{ token: string, user: User }> {
-    // Mock registration
-    const newUser: User = {
-      id: `${Date.now()}`, // Generate a unique ID
-      email: userData.email,
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      role: userData.role
-    };
-
-    // Add to mock users
-    this.mockUsers.push(newUser);
-
-    const mockResponse = {
-      token: `mock-token-${Date.now()}`,
-      user: newUser
-    };
-
-    // Simulate network delay
-    return of(mockResponse).pipe(
-      delay(800),
+    return this.http.post<{ token: string, user: User }>(
+      `${this.API_URL}/auth/signup`,
+      userData,
+      { headers: { 'Content-Type': 'application/json' } }
+    ).pipe(
       tap(response => {
         localStorage.setItem(this.TOKEN_KEY, response.token);
         localStorage.setItem(this.USER_KEY, JSON.stringify(response.user));
         this.currentUserSubject.next(response.user);
-      })
+      }),
+      catchError(this.handleError)
     );
   }
 
@@ -137,14 +94,21 @@ export class AuthService {
     return localStorage.getItem(this.TOKEN_KEY);
   }
 
-  // For testing - get all mock users
-  getMockUsers(): User[] {
-    return [...this.mockUsers];
-  }
-
-  // For testing - toggle between mock and real API mode
-  enableRealApi(): void {
-    // This method would be implemented when you're ready to switch to the real backend
-    console.log('Ready to use real API endpoints instead of mock data');
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    let errorMessage = 'An error occurred';
+    if (error.error instanceof ErrorEvent) {
+      // Client-side error
+      errorMessage = `Error: ${error.error.message}`;
+    } else {
+      // Server-side error
+      if (error.status === 400) {
+        errorMessage = error.error.message || 'Invalid credentials or validation error';
+      } else if (error.status === 409) {
+        errorMessage = 'Email already exists';
+      } else {
+        errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
+      }
+    }
+    return throwError(() => new Error(errorMessage));
   }
 }
