@@ -301,7 +301,7 @@ import { AuthService } from '../../../core/services/auth.service';
                 </button>
                 <button
                   [routerLink]="['/events/edit', event.id]"
-                  class="inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors mx-2"
+                  class="inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors mx-2" *ngIf="!isItSeeker()"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -310,7 +310,7 @@ import { AuthService } from '../../../core/services/auth.service';
                 </button>
                 <button
                   (click)="deleteEvent()"
-                  class="inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors"
+                  class="inline-flex justify-center items-center px-4 py-2 text-sm font-medium text-red-700 bg-red-100 rounded-md hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-colors" *ngIf="!isItSeeker()"
                 >
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -358,7 +358,7 @@ export class EventViewComponent implements OnInit {
   get currentImage(): EventImage {
     return this.event?.images && this.event.images.length > 0
       ? this.event.images[this.currentImageIndex]
-      : { id: '0', url: 'assets/images/placeholder.jpg' };
+      : {  url: 'assets/images/placeholder.jpg' };
   }
 
   constructor(
@@ -367,6 +367,17 @@ export class EventViewComponent implements OnInit {
     private eventService: EventService,
     private authService: AuthService
   ) {}
+
+  isItSeeker(): boolean {
+    const userString = localStorage.getItem('user_data');
+    const user = userString ? JSON.parse(userString) : null;
+    const userId = user?.id;
+    // @ts-ignore
+    if (userId!==this.event.userId) {
+      return true;
+    }
+    return false;
+  }
 
   ngOnInit(): void {
     this.authService.currentUser$.subscribe(user => {

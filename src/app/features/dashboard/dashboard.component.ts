@@ -409,6 +409,7 @@ export class DashboardComponent implements OnInit {
 
   loadEvents(): void {
     this.loading = true;
+
     this.dashboardService.getEvents(this.currentPage, this.pageSize).subscribe({
       next: () => {
         this.loading = false;
@@ -496,15 +497,15 @@ export class DashboardComponent implements OnInit {
   }
 
   // Toggle event subscription
-  toggleSubscription(event: Event): void {
+  async toggleSubscription(event: Event): Promise<void> {
     if (this.isSubscribed(event.id)) {
-      this.dashboardService.unsubscribeFromEvent(event.id);
+      await this.dashboardService.unsubscribeFromEvent(event.id);
       const index = this.subscribedEventIds.indexOf(event.id);
       if (index !== -1) {
         this.subscribedEventIds.splice(index, 1);
       }
     } else {
-      this.dashboardService.subscribeToEvent(event);
+      await this.dashboardService.subscribeToEvent(event);
       this.subscribedEventIds.push(event.id);
     }
   }

@@ -652,7 +652,7 @@ export class EventFormComponent implements OnInit {
 
   addImage(image?: EventImage): void {
     const imageForm = this.fb.group({
-      id: [image?.id || this.generateId()],
+      id: [this.generateId()],
       url: [image?.url || '', Validators.required],
       caption: [image?.caption || ''],
       isPrimary: [image?.isPrimary || false],

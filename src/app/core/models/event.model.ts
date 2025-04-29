@@ -1,6 +1,6 @@
-//path: src/app/core/models/event.model.ts
-export interface Event {
+import {UUIDTypes} from 'uuid';
 
+export interface Event {
   id: string;
   title: string;
   description?: string;
@@ -14,17 +14,17 @@ export interface Event {
   organizer?: string;
   contactEmail?: string;
   images?: EventImage[];
-  thumbnail?: string; // Main image URL for card displays
+  thumbnail?: string;
   attendees?: number;
   maxAttendees?: number;
   isPublic?: boolean;
   tags?: string[];
   createdAt?: Date | string;
   updatedAt?: Date | string;
+  userId?: string;
 }
 
 export interface EventImage {
-  id: string;
   url: string;
   caption?: string;
   isPrimary?: boolean;

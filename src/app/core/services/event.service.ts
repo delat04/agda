@@ -1,269 +1,158 @@
-// core/services/event.service.ts
-import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
-import { BehaviorSubject, Observable, of } from 'rxjs';
+import {inject, Injectable } from '@angular/core';
+import {HttpClient, HttpErrorResponse, HttpParams} from '@angular/common/http';
+import { BehaviorSubject, Observable, throwError } from 'rxjs';
+import { catchError, map, tap } from 'rxjs/operators';
 import { Event } from '../models/event.model';
-import { v4 as uuidv4 } from 'uuid';
+import {DashboardFilters} from './dashbord.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class EventService {
-  // In a real app, this would come from an API
-  private events: Event[] = [
-    {
-      id: '1',
-      title: 'Team Meeting',
-      description: 'Weekly team sync',
-      start: new Date(2025, 3, 25, 10, 0),
-      end: new Date(2025, 3, 25, 11, 0),
-      location: 'Conference Room A',
-      draggable: true,
-      organizer: 'John Smith',
-      contactEmail: 'john@example.com',
-      attendees: 5,
-      maxAttendees: 10,
-      isPublic: true,
-      tags: ['team', 'weekly'],
-      category: 'Meeting',
-      color: '#4285F4',
-      thumbnail: 'https://eventologists.co.uk/wp-content/uploads/2023/10/Eventologists-Dancing-through-the-decades-Themed-Event-70s-Entertainer-Hire-1024x683.jpeg',
-      images: [
-        {
-          id: '101',
-          url: 'https://eventologists.co.uk/wp-content/uploads/2023/10/Eventologists-Dancing-through-the-decades-Themed-Event-70s-Entertainer-Hire-1024x683.jpeg',
-          caption: 'Conference Room A',
-          isPrimary: true,
-          order: 0
-        }
-      ],
-      createdAt: new Date(2025, 3, 20),
-      updatedAt: new Date(2025, 3, 20)
-    },
-    {
-      id: '2',
-      title: 'Project Kickoff',
-      description: 'Start new project',
-      start: new Date(2025, 3, 26, 14, 0),
-      end: new Date(2025, 3, 26, 16, 0),
-      location: 'Main Hall',
-      draggable: true,
-      organizer: 'Sarah Jones',
-      contactEmail: 'sarah@example.com',
-      attendees: 15,
-      maxAttendees: 30,
-      isPublic: true,
-      tags: ['project', 'kickoff', 'important'],
-      category: 'Project',
-      color: '#0F9D58',
-      thumbnail: 'https://dynamic-media-cdn.tripadvisor.com/media/photo-o/2e/9c/db/d3/the-junction-dancefloor.jpg?w=900&h=500&s=1',
-      images: [],
-      createdAt: new Date(2025, 3, 22),
-      updatedAt: new Date(2025, 3, 22)
-    }
-    ,{
-      id: '3',
-      title: 'Design Sprint Workshop',
-      description: 'Collaborative product design session',
-      start: new Date(2025, 3, 27, 9, 0),
-      end: new Date(2025, 3, 27, 17, 0),
-      location: 'Innovation Lab',
-      draggable: true,
-      organizer: 'Emily Turner',
-      contactEmail: 'emily@example.com',
-      attendees: 8,
-      maxAttendees: 12,
-      isPublic: false,
-      tags: ['design', 'workshop', 'sprint'],
-      category: 'Workshop',
-      color: '#F4B400',
-      thumbnail: 'https://www.backdrops.com.au/wp-content/uploads/2014/03/DE003B-Disco-1B.jpg',
-      images: [
-        {
-          id: '102',
-          url: 'https://www.backdrops.com.au/wp-content/uploads/2014/03/DE003B-Disco-1B.jpg',
-          caption: 'Innovation Lab',
-          isPrimary: true,
-          order: 0
-        }
-      ],
-      createdAt: new Date(2025, 3, 23),
-      updatedAt: new Date(2025, 3, 23)
-    },
-    {
-      id: '4',
-      title: 'Marketing Strategy Session',
-      description: 'Plan next quarter\'s campaigns',
-      start: new Date(2025, 3, 28, 13, 30),
-      end: new Date(2025, 3, 28, 15, 30),
-      location: 'Board Room B',
-      draggable: true,
-      organizer: 'David Lee',
-      contactEmail: 'david@example.com',
-      attendees: 10,
-      maxAttendees: 20,
-      isPublic: true,
-      tags: ['marketing', 'strategy', 'planning'],
-      category: 'Strategy',
-      color: '#DB4437',
-      thumbnail: 'https://live-production.wcms.abc-cdn.net.au/0ddd78062b717f13e5df6a9215edf2b4?impolicy=wcms_crop_resize&cropH=2813&cropW=5000&xPos=0&yPos=260&width=862&height=485',
-      images: [],
-      createdAt: new Date(2025, 3, 24),
-      updatedAt: new Date(2025, 3, 24)
-    },
-    {
-      id: '5',
-      title: 'Customer Appreciation Day',
-      description: 'Thank our loyal customers',
-      start: new Date(2025, 3, 30, 11, 0),
-      end: new Date(2025, 3, 30, 17, 0),
-      location: 'Outdoor Garden Area',
-      draggable: true,
-      organizer: 'Olivia Brown',
-      contactEmail: 'olivia@example.com',
-      attendees: 50,
-      maxAttendees: 100,
-      isPublic: true,
-      tags: ['customer', 'celebration', 'event'],
-      category: 'Celebration',
-      color: '#AB47BC',
-      thumbnail: 'https://live-production.wcms.abc-cdn.net.au/0ddd78062b717f13e5df6a9215edf2b4?impolicy=wcms_crop_resize&cropH=2813&cropW=5000&xPos=0&yPos=260&width=862&height=485',
-      images: [
-        {
-          id: '103',
-          url: 'https://www.eventbrite.com/blog/wp-content/uploads/2022/02/customer_appreciation_event-scaled.jpg',
-          caption: 'Garden Area',
-          isPrimary: true,
-          order: 0
-        }
-      ],
-      createdAt: new Date(2025, 3, 25),
-      updatedAt: new Date(2025, 3, 25)
-    }
-  ];
+  private readonly API_URL = 'http://localhost:8080/api/events';
+  private eventsSubject = new BehaviorSubject<Event[]>([]);
 
-  private eventsSubject = new BehaviorSubject<Event[]>(this.events);
+  constructor(private http: HttpClient) {
+    this.loadInitialEvents();
+  }
 
-  constructor(private http: HttpClient) {}
+  private loadInitialEvents(): void {
+    this.getAllEvents().subscribe(events => {
+      this.eventsSubject.next(events);
+    });
+  }
 
-  getEvents(): Observable<Event[]> {
-    // In a real application, this would be an HTTP request
-    return this.eventsSubject.asObservable();
+  // getEvents(): Observable<Event[]> {
+  //   return this.eventsSubject.asObservable();
+  // }
+
+  getAllEvents(): Observable<Event[]> {
+    return this.http.get<Event[]>(this.API_URL).pipe(
+      tap(events => this.eventsSubject.next(events)),
+      catchError(this.handleError)
+    );
   }
 
   getEvent(id: string | undefined): Observable<Event | undefined> {
-    return of(this.events.find(event => event.id === id));
+    if (!id) {
+      return throwError(() => new Error('Event ID is required'));
+    }
+    return this.http.get<Event>(`${this.API_URL}/${id}`).pipe(
+      catchError(this.handleError)
+    );
   }
 
-  createEvent(event: Omit<Event, 'id'>): Observable<Event> {
-    const now = new Date();
-    const newEvent = {
+  createEvent(event: Omit<Event, 'id' | 'createdAt' | 'updatedAt'>): Observable<Event> {
+    const  userString = localStorage.getItem('user_data');
+    const user = userString ? JSON.parse(userString) : null;
+    const userId = user?.id;
+    // Merge userId into the event object
+    const payload = {
       ...event,
-      id: uuidv4(),
-      createdAt: now,
-      updatedAt: now
+      userId: userId
     };
 
-    // Ensure images have IDs
-    if (newEvent.images) {
-      newEvent.images = newEvent.images.map((img, index) => ({
-        ...img,
-        id: img.id || uuidv4(),
-        order: img.order !== undefined ? img.order : index
-      }));
-    }
-
-    this.events.push(newEvent);
-    this.eventsSubject.next([...this.events]);
-    return of(newEvent);
+    return this.http.post<Event>(this.API_URL, payload).pipe(
+      tap(newEvent => {
+        const currentEvents = this.eventsSubject.value;
+        this.eventsSubject.next([...currentEvents, newEvent]);
+      }),
+      catchError(this.handleError)
+    );
   }
 
   updateEvent(event: Event): Observable<Event> {
-    const index = this.events.findIndex(e => e.id === event.id);
-    if (index !== -1) {
-      // Ensure images have IDs and proper order
-      if (event.images) {
-        event.images = event.images.map((img, index) => ({
-          ...img,
-          id: img.id || uuidv4(),
-          order: img.order !== undefined ? img.order : index
-        }));
-      }
-
-      // Update timestamps
-      const updatedEvent = {
-        ...event,
-        updatedAt: new Date()
-      };
-
-      this.events[index] = updatedEvent;
-      this.eventsSubject.next([...this.events]);
-      return of(updatedEvent);
-    }
-    return of(event);
+    return this.http.put<Event>(`${this.API_URL}/${event.id}`, event).pipe(
+      tap(updatedEvent => {
+        const currentEvents = this.eventsSubject.value;
+        const index = currentEvents.findIndex(e => e.id === updatedEvent.id);
+        if (index !== -1) {
+          currentEvents[index] = updatedEvent;
+          this.eventsSubject.next([...currentEvents]);
+        }
+      }),
+      catchError(this.handleError)
+    );
   }
 
   deleteEvent(id: string): Observable<boolean> {
-    const index = this.events.findIndex(e => e.id === id);
-    if (index !== -1) {
-      this.events.splice(index, 1);
-      this.eventsSubject.next([...this.events]);
-      return of(true);
-    }
-    return of(false);
+    return this.http.delete<void>(`${this.API_URL}/${id}`, { observe: 'response' }).pipe(
+      map(response => response.status === 204),
+      tap(success => {
+        if (success) {
+          const currentEvents = this.eventsSubject.value.filter(e => e.id !== id);
+          this.eventsSubject.next(currentEvents);
+        }
+      }),
+      catchError(this.handleError)
+    );
   }
 
-  updateEventDates(id: string, start: Date, end: Date): Observable<Event | null> {
-    const index = this.events.findIndex(e => e.id === id);
-    if (index !== -1) {
-      // Create a new event object with updated dates
-      const updatedEvent = {
-        ...this.events[index],
-        start: new Date(start),
-        end: new Date(end),
-        updatedAt: new Date()
-      };
-
-      // Replace the old event with the updated one
-      this.events[index] = updatedEvent;
-
-      // Notify subscribers about the changes
-      this.eventsSubject.next([...this.events]);
-
-      return of(updatedEvent);
-    }
-
-    return of(null as any);
+  updateEventDates(id: string, start: Date, end: Date): Observable<Event> {
+    return this.http.patch<Event>(`${this.API_URL}/${id}/dates`, { start, end }).pipe(
+      tap(updatedEvent => {
+        const currentEvents = this.eventsSubject.value;
+        const index = currentEvents.findIndex(e => e.id === id);
+        if (index !== -1) {
+          currentEvents[index] = updatedEvent;
+          this.eventsSubject.next([...currentEvents]);
+        }
+      }),
+      catchError(this.handleError)
+    );
   }
 
-  // Filter events by category
   getEventsByCategory(category: string): Observable<Event[]> {
-    const filteredEvents = this.events.filter(event =>
-      event.category && event.category.toLowerCase() === category.toLowerCase()
+    return this.http.get<Event[]>(`${this.API_URL}/category/${category}`).pipe(
+      catchError(this.handleError)
     );
-    return of(filteredEvents);
   }
 
-  // Search events by tag
   getEventsByTag(tag: string): Observable<Event[]> {
-    const filteredEvents = this.events.filter(event =>
-      event.tags && event.tags.some(t => t.toLowerCase() === tag.toLowerCase())
+    return this.http.get<Event[]>(`${this.API_URL}/tag/${tag}`).pipe(
+      catchError(this.handleError)
     );
-    return of(filteredEvents);
   }
 
-  // Get upcoming events
   getUpcomingEvents(limit: number = 5): Observable<Event[]> {
-    const now = new Date();
-    const upcomingEvents = this.events
-      .filter(event => new Date(event.start) > now)
-      .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
-      .slice(0, limit);
-
-    return of(upcomingEvents);
+    return this.http.get<Event[]>(`${this.API_URL}/upcoming?limit=${limit}`).pipe(
+      catchError(this.handleError)
+    );
   }
 
-  getSubscribedEvents() {
+  private handleError(error: HttpErrorResponse): Observable<never> {
+    let errorMessage = 'An error occurred';
+    if (error.error instanceof ErrorEvent) {
+      // Client-side error
+      errorMessage = `Error: ${error.error.message}`;
+    } else {
+      // Server-side error
+      if (error.status === 400) {
+        errorMessage = error.error.message || 'Invalid request';
+      } else if (error.status === 404) {
+        errorMessage = 'Event not found';
+      } else if (error.status === 409) {
+        errorMessage = 'Data conflict';
+      } else {
+        errorMessage = `Error Code: ${error.status}\nMessage: ${error.message}`;
+      }
+    }
+    return throwError(() => new Error(errorMessage));
+  }
 
+
+
+
+  getEvents(): Observable<Event[]> {
+    const  userString = localStorage.getItem('user_data');
+    const user = userString ? JSON.parse(userString) : null;
+    const userId = user?.id;
+    const params = new HttpParams().set('userId', userId);
+    return this.http.get<Event[]>(`${this.API_URL}/by-user`, { params }).pipe(
+      catchError(error => {
+        console.error('Error fetching events by user ID:', error);
+        return throwError(() => new Error('Failed to fetch events by user ID'));
+      })
+    );
   }
 }

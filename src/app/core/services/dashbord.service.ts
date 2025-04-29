@@ -1,9 +1,9 @@
-// features/dashboard/services/dashboard.service.ts
 import { Injectable, inject } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, map, of, tap } from 'rxjs';
+import { BehaviorSubject, Observable, combineLatest, map, of, tap, throwError } from 'rxjs';
+import { catchError } from 'rxjs/operators';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { EventService } from './event.service';
 import { Event } from '../models/event.model';
-import { AuthService } from './auth.service';
 
 export interface DashboardFilters {
   searchTerm: string;
@@ -18,9 +18,10 @@ export interface DashboardFilters {
 })
 export class DashboardService {
   private eventService = inject(EventService);
-  private authService = inject(AuthService);
+  private http = inject(HttpClient);
+  private apiUrl = 'http://localhost:8080/api/dashboard';
+  private ApiUrl = 'http://localhost:8080/api/events';
 
-  // Filter state
   private filtersSubject = new BehaviorSubject<DashboardFilters>({
     searchTerm: '',
     category: '',
@@ -29,24 +30,18 @@ export class DashboardService {
     tags: []
   });
 
-  // Expose current filters as an observable
   public filters$ = this.filtersSubject.asObservable();
 
-  // Track available categories and tags
   private categoriesSubject = new BehaviorSubject<string[]>([]);
   private tagsSubject = new BehaviorSubject<string[]>([]);
 
   public categories$ = this.categoriesSubject.asObservable();
   public tags$ = this.tagsSubject.asObservable();
 
-  // Track user's subscribed event IDs
   private subscribedEventIdsSubject = new BehaviorSubject<string[]>([]);
 
-  // Filtered events
-  private allEvents$ = this.eventService.getEvents();
+  private allEvents$ = this.eventService.getAllEvents();
 
-
-  // Subscribed events
   public subscribedEvents$ = combineLatest([
     this.allEvents$,
     this.subscribedEventIdsSubject
@@ -57,91 +52,213 @@ export class DashboardService {
   );
 
   constructor() {
-    // Initialize available categories and tags
-    this.updateAvailableCategoriesAndTags();
-
-    // Initialize user's subscribed events
+    this.loadCategoriesAndTags();
     this.loadUserSubscriptions();
   }
 
-  // Load user's subscribed events from storage or API
+  private getUserIdFromStorage(): string | null {
+    const userString = localStorage.getItem('user_data');
+    const user = userString ? JSON.parse(userString) : null;
+    const userId = user?.id;
+    return userId;
+  }
+
   private loadUserSubscriptions(): void {
-    // In a real app, we would fetch this from a backend API
-    // For now, we'll use localStorage as a simple persistent storage
-    this.authService.currentUser$.subscribe(user => {
-      if (user) {
-        const storedSubscriptions = localStorage.getItem(`user_${user.id}_subscriptions`);
-        if (storedSubscriptions) {
-          this.subscribedEventIdsSubject.next(JSON.parse(storedSubscriptions));
-        } else {
-          this.subscribedEventIdsSubject.next([]);
-        }
-      } else {
-        this.subscribedEventIdsSubject.next([]);
-      }
+    const userId = this.getUserIdFromStorage();
+    if (!userId) {
+      console.error('No user ID found in localStorage for loading subscriptions');
+      this.subscribedEventIdsSubject.next([]);
+      return;
+    }
+    const params = new HttpParams().set('userId', userId);
+    this.http.get<string[]>(`${this.apiUrl}/subscriptions`, { params }).pipe(
+      tap(eventIds => console.log('Loaded subscribed event IDs for user', userId, ':', eventIds)),
+      catchError(error => {
+        console.error('Error loading subscriptions for user', userId, ':', error);
+        return of([]);
+      })
+    ).subscribe(eventIds => {
+      this.subscribedEventIdsSubject.next(eventIds);
     });
   }
 
-  // Get subscribed event IDs as an observable
+  private loadCategoriesAndTags(): void {
+    this.http.get<string[]>(`${this.apiUrl}/categories`).pipe(
+      catchError(error => {
+        console.error('Error loading categories:', error);
+        return of([]);
+      })
+    ).subscribe(categories => {
+      this.categoriesSubject.next(categories);
+    });
+
+    this.http.get<string[]>(`${this.apiUrl}/tags`).pipe(
+      catchError(error => {
+        console.error('Error loading tags:', error);
+        return of([]);
+      })
+    ).subscribe(tags => {
+      this.tagsSubject.next(tags);
+    });
+  }
+
   getSubscribedEventIds(): Observable<string[]> {
     return this.subscribedEventIdsSubject.asObservable();
   }
+
   getSubscribedEvents(): Observable<Event[]> {
     return this.subscribedEvents$;
   }
-  // Subscribe to an event
+
   subscribeToEvent(event: Event): Observable<string[]> {
-    return this.authService.currentUser$.pipe(
-      tap(user => {
-        if (user) {
-          const currentIds = this.subscribedEventIdsSubject.value;
-          if (!currentIds.includes(event.id)) {
-            const newIds = [...currentIds, event.id];
-            this.subscribedEventIdsSubject.next(newIds);
+    const userId = this.getUserIdFromStorage();
+    console.log('subscribeToEvent called with event:', event, 'and userId:', userId);
+    console.log('POST URL:', `${this.apiUrl}/subscriptions/${event.id}`);
 
-            // Save to storage
-            localStorage.setItem(`user_${user.id}_subscriptions`, JSON.stringify(newIds));
+    if (!userId) {
+      console.error('No user ID found in localStorage for subscription');
+      return of(this.subscribedEventIdsSubject.value);
+    }
+    if (!event || !event.id) {
+      console.error('Invalid event or event ID:', event);
+      return of(this.subscribedEventIdsSubject.value);
+    }
 
-            // In a real app, send this to the backend
-            console.log(`User ${user.id} subscribed to event ${event.id}`);
+    const currentIds = this.subscribedEventIdsSubject.value;
+    if (!currentIds.includes(event.id)) {
+      console.log("About to send HTTP POST request");
+
+      // Create the actual request payload and log it
+      const payload = { userId };
+      console.log('Request payload:', payload);
+
+      this.http
+        .post<any>(
+          `${this.apiUrl}/subscriptions/${encodeURIComponent(String(event.id))}`,
+          payload,
+          {
+            headers: { 'Content-Type': 'application/json' }
           }
-        }
-      }),
-      map(() => this.subscribedEventIdsSubject.value)
-    );
-  }
+        )
+        .pipe(
+          tap(response => {
+            console.log(`POST /subscriptions/${event.id} full response:`, response);
+            console.log(`POST /subscriptions/${event.id} status:`, response.status);
+            console.log(`POST /subscriptions/${event.id} headers:`, response.headers);
 
-// Update unsubscribeFromEvent to return an Observable
+            if (response.status === 201) {
+              const newIds = [...currentIds, event.id];
+              this.subscribedEventIdsSubject.next(newIds);
+              console.log('Updated subscribed event IDs:', newIds);
+            } else {
+              console.warn(`Unexpected response status: ${response.status}`);
+            }
+          }),
+          map(() => this.subscribedEventIdsSubject.value),
+          catchError(error => {
+            console.error(`Failed to subscribe to event ${event.id} for user ${userId}, error type:`, typeof error);
+            console.error(`Error status: ${error.status}, message: ${error.message}, stack trace:`, error.stack);
+            console.error(`Full error object:`, error);
+
+            if (error.error instanceof ErrorEvent) {
+              // Client-side error
+              console.error(`Client-side error: ${error.error.message}`);
+            } else {
+              // Server-side error
+              console.error(`Server status: ${error.status}, error: ${error.error}`);
+            }
+
+            return throwError(() => new Error('Subscription failed'));
+          })
+        )
+        .subscribe({
+          next: (value) => {
+            console.log('Subscription success, current subscribed event IDs:', value);
+          },
+          error: (err) => {
+            console.error('Subscription failed:', err);
+          },
+          complete: () => {
+            console.log('Subscription request completed');
+          }
+        });
+
+    }
+    console.log(`Event ${event.id} already subscribed for user ${userId}`);
+    return of(currentIds);
+  }
   unsubscribeFromEvent(eventId: string): Observable<string[]> {
-    return this.authService.currentUser$.pipe(
-      tap(user => {
-        if (user) {
-          const currentIds = this.subscribedEventIdsSubject.value;
-          const index = currentIds.indexOf(eventId);
-
-          if (index !== -1) {
-            const newIds = currentIds.filter(id => id !== eventId);
-            this.subscribedEventIdsSubject.next(newIds);
-
-            // Save to storage
-            localStorage.setItem(`user_${user.id}_subscriptions`, JSON.stringify(newIds));
-
-            // In a real app, send this to the backend
-            console.log(`User ${user.id} unsubscribed from event ${eventId}`);
+    const userId = this.getUserIdFromStorage();
+    console.log('unsubscribeFromEvent called with eventId:', eventId, 'and userId:', userId);
+    console.log('DELETE URL:', `${this.apiUrl}/subscriptions/${eventId}`);
+    if (!userId) {
+      console.error('No user ID found in localStorage for unsubscription');
+      return of(this.subscribedEventIdsSubject.value);
+    }
+    if (!eventId) {
+      console.error('Invalid event ID:', eventId);
+      return of(this.subscribedEventIdsSubject.value);
+    }
+    const currentIds = this.subscribedEventIdsSubject.value;
+    if (currentIds.includes(eventId)) {
+      this.http
+        .post<any>(
+          `${this.apiUrl}/subscriptions/${encodeURIComponent(String(eventId))}/unsubscribe?userId=${encodeURIComponent(String(userId))}`,
+          null, // No body, since userId is now in the URL
+          {
+            headers: { 'Content-Type': 'application/json' },
+            observe: 'response'
           }
-        }
-      }),
-      map(() => this.subscribedEventIdsSubject.value)
-    );
+        )
+        .pipe(
+          tap(response => {
+            console.log(`POST /subscriptions/${eventId}/unsubscribe response:`, response);
+            if (response.status === 204) {
+              const newIds = currentIds.filter(id => id !== eventId);
+              this.subscribedEventIdsSubject.next(newIds);
+              console.log('Updated subscribed event IDs after unsubscribe:', newIds);
+            } else {
+              console.warn(`Unexpected response status: ${response.status}`);
+            }
+          }),
+          map(() => this.subscribedEventIdsSubject.value),
+          catchError(error => {
+            console.error(`Failed to unsubscribe from event ${eventId} for user ${userId}, error type:`, typeof error);
+            console.error(`Error status: ${error.status}, message: ${error.message}, stack trace:`, error.stack);
+            console.error(`Full error object:`, error);
+
+            if (error.error instanceof ErrorEvent) {
+              // Client-side error
+              console.error(`Client-side error: ${error.error.message}`);
+            } else {
+              // Server-side error
+              console.error(`Server status: ${error.status}, error: ${error.error}`);
+            }
+
+            return throwError(() => new Error('Unsubscription failed'));
+          })
+        )
+        .subscribe({
+          next: (value) => {
+            console.log('Unsubscription success, current subscribed event IDs:', value);
+          },
+          error: (err) => {
+            console.error('Unsubscription failed:', err);
+          },
+          complete: () => {
+            console.log('Unsubscription request completed');
+          }
+        });
+    }
+      console.log(`Event ${eventId} not subscribed for user ${userId}`);
+    return of(currentIds);
   }
 
-  // Update filters
   updateFilters(updates: Partial<DashboardFilters>): void {
     const currentFilters = this.filtersSubject.value;
     this.filtersSubject.next({ ...currentFilters, ...updates });
   }
 
-  // Reset all filters
   resetFilters(): void {
     this.filtersSubject.next({
       searchTerm: '',
@@ -152,28 +269,22 @@ export class DashboardService {
     });
   }
 
-  // Apply filters to events
   private applyFilters(events: Event[], filters: DashboardFilters): Event[] {
     return events.filter(event => {
-      // Search term filter (search in title, description, location)
       const searchMatch = !filters.searchTerm ||
         event.title.toLowerCase().includes(filters.searchTerm.toLowerCase()) ||
         (event.description && event.description.toLowerCase().includes(filters.searchTerm.toLowerCase())) ||
         (event.location && event.location.toLowerCase().includes(filters.searchTerm.toLowerCase()));
 
-      // Category filter
       const categoryMatch = !filters.category || event.category === filters.category;
 
-      // Date range filter
       const startDate = filters.startDate ? new Date(filters.startDate) : null;
       const endDate = filters.endDate ? new Date(filters.endDate) : null;
-
       const eventStart = new Date(event.start);
       const dateMatch =
         (!startDate || eventStart >= startDate) &&
         (!endDate || eventStart <= endDate);
 
-      // Tags filter
       const tagsMatch = filters.tags.length === 0 ||
         (event.tags && filters.tags.some(tag => event.tags!.includes(tag)));
 
@@ -181,16 +292,13 @@ export class DashboardService {
     });
   }
 
-  // Update available categories and tags from all events
   private updateAvailableCategoriesAndTags(): void {
     this.allEvents$.subscribe(events => {
-      // Extract unique categories
       const categories = [...new Set(events
         .map(event => event.category)
         .filter(Boolean) as string[]
       )];
 
-      // Extract unique tags
       const tags = [...new Set(events
         .flatMap(event => event.tags || [])
       )];
@@ -200,8 +308,6 @@ export class DashboardService {
     });
   }
 
-
-// Get upcoming subscribed events (sorted by date)
   getUpcomingSubscribedEvents(): Observable<Event[]> {
     return this.subscribedEvents$.pipe(
       map(events => {
@@ -213,13 +319,9 @@ export class DashboardService {
     );
   }
 
-  // New methods to add to DashboardService
-
-// Track all events and paginated events separately
   private allEventsSubject = new BehaviorSubject<Event[]>([]);
   private paginatedEventsSubject = new BehaviorSubject<Event[]>([]);
 
-// Update the filteredEvents$ to use paginated events instead
   public filteredEvents$ = combineLatest([
     this.paginatedEventsSubject as Observable<Event[]>,
     this.filters$ as Observable<DashboardFilters>
@@ -227,47 +329,58 @@ export class DashboardService {
     map(([events, filters]: [Event[], DashboardFilters]) => this.applyFilters(events, filters))
   );
 
-// Get count of all events (potentially filtered)
-  // Fixed method with proper TypeScript typing
   getAllEventsCount(): Observable<number> {
     return combineLatest([
       this.allEvents$,
       this.filters$
     ]).pipe(
       map(([events, filters]: [Event[], DashboardFilters]) => {
-        // Apply only filters (not pagination) to get total count
         return this.applyFilters(events, filters).length;
       })
     );
   }
 
-// Get events with pagination - returns the first page of events
-  getEvents(page: number = 1, pageSize: number = 9): Observable<Event[]> {
-    return this.allEvents$.pipe(
-      tap(allEvents => {
-        // Store all events
-        this.allEventsSubject.next(allEvents);
 
-        // Apply pagination
+
+  getEvents(page: number = 1, pageSize: number = 9): Observable<Event[]> {
+    const userId = this.getUserIdFromStorage();
+    if (!userId) {
+      console.error('No user ID found in localStorage for fetching events');
+      return throwError(() => new Error('No user ID available'));
+    }
+    const params = new HttpParams().set('userId', userId);
+    return this.http.get<Event[]>(`${this.apiUrl}/events`, { params }).pipe(
+      tap(allEvents => {
+        this.allEventsSubject.next(allEvents);
         const startIndex = (page - 1) * pageSize;
         const paginatedEvents = allEvents.slice(0, startIndex + pageSize);
         this.paginatedEventsSubject.next(paginatedEvents);
       }),
-      // Return the paginated events
-      map(() => this.paginatedEventsSubject.value)
+      map(() => this.paginatedEventsSubject.value),
+      catchError(error => {
+        console.error('Error fetching events by user ID:', error);
+        return throwError(() => new Error('Failed to fetch events by user ID'));
+      })
     );
   }
-
-// Load additional events (for infinite scrolling or "load more" functionality)
+  getManagerEvents(page: number = 1, pageSize: number = 9): Observable<Event[]> {
+    const  userString = localStorage.getItem('user_data');
+    const user = userString ? JSON.parse(userString) : null;
+    const userId = user?.id;
+    const params = new HttpParams().set('userId', userId);
+    return this.http.get<Event[]>(`${this.ApiUrl}/by-user`, { params }).pipe(
+      catchError(error => {
+        console.error('Error fetching events by user ID:', error);
+        return throwError(() => new Error('Failed to fetch events by user ID'));
+      })
+    );
+  }
   loadMoreEvents(page: number, pageSize: number): Observable<Event[]> {
     const allEvents = this.allEventsSubject.value;
     const startIndex = 0;
     const endIndex = page * pageSize;
-
-    // Get events up to the current page
     const paginatedEvents = allEvents.slice(startIndex, endIndex);
     this.paginatedEventsSubject.next(paginatedEvents);
-
     return of(paginatedEvents);
   }
 }
